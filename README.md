@@ -1,6 +1,6 @@
-# OpenVPN for Rancher with PAM authentication
+# OpenVPN for Rancher with modular authentication
 
-OpenVPN server image made to give access to Rancher network.
+OpenVPN server image made to give access to Rancher network with modular authentication.
 
 This Server doesn't relies on clients certificates, but on credential based authentication
 
