@@ -16,9 +16,6 @@ docker build -t $DOCKER_IMAGE:$DOCKER_TAG .
 if [ "$?" = "0" ]
 then
 	echo "Build done for tag $DOCKER_IMAGE:$DOCKER_TAG"
-	echo "Launch example : "
-	echo "	docker run -d --privileged=true --name vpn \\"
-	echo "		-e AUTH_METHOD=ldap -p 1194:1194 $DOCKER_IMAGE:$DOCKER_TAG"
 else
 	echo "Build failed for tag $DOCKER_IMAGE:$DOCKER_TAG"
 fi
