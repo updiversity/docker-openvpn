@@ -8,9 +8,13 @@ import os
 import sys
 import ldap
 import kerberos
+import requests
+from requests.auth import HTTPBasicAuth
+from requests.auth import HTTPDigestAuth
 
-def auth_success():
+def auth_success(username):
     """ Authentication success, simply exiting with no error """
+    print "[INFO] OpenVPN Authentication success for " + username
     exit(0)
     
 
@@ -19,28 +23,72 @@ def auth_failure(reason):
     print >> sys.stderr, "[INFO] OpenVPN Authentication failure : " + reason
     exit(1)
 
-def auth_ldap(address,pattern,password):
+def auth_ldap(address, basedn, binddn, bindpwd, search, username, password):
     """ Ldap authentication handler """
+    
+    # Initializing connection to ldap server
     try:
         conn = ldap.initialize(address)
-        conn.protocol_version = 3
-        conn.set_option(ldap.OPT_REFERRALS, 0)
-        result = conn.simple_bind_s(pattern, password)
+    except:
+        auth_failure("Cannot connect to url "+ address,'ERROR')
+        
+    conn.protocol_version = 3
+    conn.set_option(ldap.OPT_REFERRALS, 0)
+        
+    # Trying authentication
+    try:    
+        # if server need authentication to be crawled
+        if(binddn is not None and binddn!=''):
+            conn.simple_bind_s(binddn, bindpwd)
+        
+        # Searching for user based on search pattern
+        result = conn.search_s(basedn, ldap.SCOPE_SUBTREE, search.replace('$username',username), None, 1)
+        
+        # Nothing found => failure
+        if not result or len(result) != 1:
+            auth_failure('Cannot find username '+ username)
+        else:
+            userdn=result[0][0]
+        
+        try:
+            # Trying to authenticate with user credentials
+            conn.simple_bind_s(userdn, password)
+            auth_success(username)
+            
+        except ldap.INVALID_CREDENTIALS:
+            # authentication as user failed
+            auth_failure("Invalid credentials for username "+ username)
+            
     except ldap.INVALID_CREDENTIALS:
-         auth_failure("Invalid credentials for "+ username)
+        # authentication for search failed
+        auth_failure("Invalid credentials for initial bind "+ binddn,'ERROR')
+        
     except ldap.SERVER_DOWN:
-        auth_failure("Server unreachable")
+        # Server unreachable
+        auth_failure("Server unreachable",'ERROR')
+        
     except ldap.LDAPError, e:
+        # Other ldap error
         if type(e.message) == dict and e.message.has_key('desc'):
             auth_failure("LDAP error: " + e.message['desc'])
         else: 
             auth_failure("LDAP error: " + e)
     finally:
+        # Always disconnecting, with exception or not
         conn.unbind_s()
-    
-    auth_success()
+        
+        
+def auth_http_basic(url, username, password):
+    if (requests.get(url, auth=HTTPBasicAuth(username, password))):
+        auth_success(username)
+    else:
+        auth_failure("Invalid credentials for username "+ username)
 
-
+def auth_http_digest(url, username, password):
+    if (requests.get(url, auth=HTTPDigestAuth(username, password))):
+        auth_success(username)
+    else:
+        auth_failure("Invalid credentials for username "+ username)
 
 if all (k in os.environ for k in ("username","password","AUTH_METHOD")):
     username = os.environ.get('username') 
@@ -54,16 +102,50 @@ if all (k in os.environ for k in ("username","password","AUTH_METHOD")):
     #   docker exec ldap ldapsearch -x -h localhost -b dc=acme,dc=tld -D "cn=admin,dc=acme,dc=tld" -w admin
     # Example :
     #   AUTH_METHOD='ldap'
-    #   LDAP_URL='ldap(s)://ldap.acme.tld[:port]'
-    #   LDAP_PATTERN='cn=$username,dc=acme,dc=tld'
+    #   AUTH_LDAP_URL='ldap[s]://ldap.acme.tld[:port]'
+    #   AUTH_LDAP_SEARCH='(uid=$username)'
+    #   AUTH_LDAP_BASEDN='dc=acme,dc=com'
+    #   AUTH_LDAP_BINDDN='cn=admin,dc=acme,dc=com'
+    #   AUTH_LDAP_BINDPWD='myadminpwd'
+    # 
     if auth_method=='ldap':
-        if all (k in os.environ for k in ("AUTH_LDAP_URL","AUTH_LDAP_PATTERN")):
+        if all (k in os.environ for k in ("AUTH_LDAP_URL","AUTH_LDAP_SEARCH","AUTH_LDAP_BASEDN")):
             address=os.environ.get('AUTH_LDAP_URL') 
-            pattern=os.environ.get('AUTH_LDAP_PATTERN').replace('$username',username) 
-            auth_ldap(address,pattern,password)
-
+            search=os.environ.get('AUTH_LDAP_SEARCH').replace('$username',username) 
+            basedn=os.environ.get('AUTH_LDAP_BASEDN')
+            binddn=os.environ.get('AUTH_LDAP_BINDDN')
+            bindpwd=os.environ.get('AUTH_LDAP_BINDPWD')
+            auth_ldap(address, basedn, binddn, bindpwd, search, username, password)
         else:
-            auth_failure('Missing one of mandatory environement variables for authentication method "ldap" : AUTH_LDAP_URL or AUTH_LDAP_PATTERN')
+            auth_failure('Missing one of mandatory environment variables for authentication method "ldap" : AUTH_LDAP_URL or AUTH_LDAP_SEARCH or AUTH_LDAP_BASEDN')
+            
+    #=====[ HTTP Basic ]==============================================================
+    # How to test:
+    #   Just test against github api url : https://api.github.com/user
+    # Example :
+    #   AUTH_METHOD='httpbasic'
+    #   AUTH_HTTPBASIC_URL='http[s]://hostname[:port][/uri]'
+    # 
+    elif auth_method=='httpbasic':
+        if "AUTH_HTTPBASIC_URL" in os.environ:
+            url=os.environ.get('AUTH_HTTPBASIC_URL')
+            auth_http_basic(url, username, password)
+        else:
+            auth_failure('Missing mandatory environment variable for authentication method "httpbasic" : AUTH_HTTPBASIC_URL')
+            
+    #=====[ HTTP Digest ]==============================================================
+    # How to test:
+    #   Just test against httpbin sandbox url : https://httpbin.org/digest-auth/auth/user/pass
+    # Example :
+    #   AUTH_METHOD='httpdigest'
+    #   AUTH_HTTPDIGEST_URL='http[s]://hostname[:port][/uri]'
+    # 
+    elif auth_method=='httpdigest':
+        if "AUTH_HTTPDIGEST_URL" in os.environ:
+            url=os.environ.get('AUTH_HTTPDIGEST_URL')
+            auth_http_digest(url, username, password)
+        else:
+            auth_failure('Missing mandatory environment variable for authentication method "httpdigest" : AUTH_HTTPDIGEST_URL')
             
     #=====[ Kerberos ]==============================================================
     # How to test:
@@ -78,7 +160,7 @@ if all (k in os.environ for k in ("username","password","AUTH_METHOD")):
         #    if not kerberos.checkPassword(username,password,realm):
         #        auth_failure("Invalid credentials for " + username)
         #    else:
-        #        auth_success()
+        #        auth_success(username)
         #else:
         #    auth_failure("Missing mandatory environement variable KERBEROS_REALM")
 

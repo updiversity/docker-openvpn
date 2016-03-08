@@ -33,8 +33,21 @@ checkpoint
 env | grep "REMOTE_"
 
 # Saving environment variables
-env | grep "AUTH_" | sed 's/^/export /' > $OPENVPNDIR/auth.env
-env | grep "REMOTE_" | sed 's/^/export /' > $OPENVPNDIR/remote.env
+
+[ -e "$OPENVPNDIR/auth.env" ] && rm "$OPENVPNDIR/auth.env"
+env | grep "AUTH_" | while read i
+do
+    var=$(echo "$i" | awk -F= '{print $1}')
+    var_data=$( echo "${!var}" | sed "s/'/\\'/g" )
+    echo "export $var='$var_data'" >> $OPENVPNDIR/auth.env
+done
+
+env | grep "REMOTE_" | while read i
+do
+    var=$(echo "$i" | awk -F= '{print $1}')
+    var_data=$( echo "${!var}" | sed "s/'/\\'/g" )
+    echo "export $var='$var_data'" >> $OPENVPNDIR/remote.env
+done
 
 #=====[ Generating server config ]==============================================
 VPNPOOL_NETMASK=$(netmask -s $VPNPOOL_NETWORK/$VPNPOOL_CIDR | awk -F/ '{print $2}')

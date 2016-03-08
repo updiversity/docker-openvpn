@@ -1,7 +1,7 @@
 FROM debian:jessie
 MAINTAINER Alexis Ducastel <alexis@ducastel.net>
 
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     easy-rsa \
     dnsutils \
     iptables \
@@ -13,6 +13,7 @@ RUN apt-get update && apt-get install -y \
     python-kerberos \
     python-ldap \
     python-paramiko \
+    python-requests \
     wget \
     && apt-get clean
 
