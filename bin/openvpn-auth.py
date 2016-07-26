@@ -163,7 +163,7 @@ if all (k in os.environ for k in ("username","password","AUTH_METHOD")):
             url=os.environ.get('AUTH_RANCHERLOCAL_URL')
             auth_rancher_local(url, username, password)
         else:
-            auth_failure('Missing mandatory environment variable for authentication method "httpbasic" : AUTH_RANCHERLOCAL_URL')
+            auth_failure('Missing mandatory environment variable for authentication method "rancherlocal" : AUTH_RANCHERLOCAL_URL')
 
             
     #=====[ Kerberos ]==============================================================
