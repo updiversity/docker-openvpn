@@ -8,6 +8,7 @@ Current version is shipped with following authentication :
 - httpbasic
 - httpdigest
 - ldap
+- rancherlocal
 
 ---
 
@@ -152,6 +153,22 @@ docker run -d --privileged=true -p 1194:1194 --link ldap:ldapsrv \
     mdns/rancher-openvpn
 ```
 ---
+
+### Rancher Server in local mode
+
+Authentication is made by trying to connect to a Rancher Server configured in local mode.
+
+Each variable is mandatory :
+- AUTH_METHOD=rancherlocal
+- AUTH_HTTPBASIC_URL is the http server url, ex : AUTH_HTTPBASIC_URL='http[s]://hostname[:port]/v1/token'
+
+You can test authentication against the Rancher api server :
+```sh
+docker run -d --privileged=true -p 1194:1194 \
+    -e AUTH_METHOD=rancherlocal \
+    -e AUTH_HTTPBASIC_URL=https://rancher.example.com/v1/token \
+    mdns/rancher-openvpn
+```
 
 ## Client configuration
 
