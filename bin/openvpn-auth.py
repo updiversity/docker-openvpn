@@ -18,9 +18,9 @@ def auth_success(username):
     exit(0)
     
 
-def auth_failure(reason):
+def auth_failure(reason, severity="INFO"):
     """ Authentication failure, rejecting login with a stderr reason """
-    print >> sys.stderr, "[INFO] OpenVPN Authentication failure : " + reason
+    print >> sys.stderr, "["+severity+"] OpenVPN Authentication failure : " + reason
     exit(1)
 
 def auth_ldap(address, basedn, binddn, bindpwd, search, username, password):
