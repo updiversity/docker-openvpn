@@ -18,6 +18,15 @@ OPENVPNDIR="/etc/openvpn"
 [ "$VPNPOOL_CIDR" = "" ]    && export VPNPOOL_CIDR="16"
 [ "$REMOTE_IP" = "" ]       && export REMOTE_IP="ipOrHostname"
 [ "$REMOTE_PORT" = "" ]     && export REMOTE_PORT="1194"
+[ "$PUSHDNS" = "" ]         && export PUSHDNS="169.254.169.250"
+[ "$PUSHSEARCH" = "" ]      && export PUSHSEARCH="rancher.internal"
+
+[ "$ROUTE_NETWORK" = "" ]   && export ROUTE_NETWORK="10.42.0.0"
+[ "$ROUTE_NETMASK" = "" ]   && export ROUTE_NETMASK="255.255.0.0"
+
+export RANCHER_METADATA_API='push "route 169.254.169.250 255.255.255.255"'
+[ "$NO_RANCHER_METADATA_API" != "" ] && export RANCHER_METADATA_API=""
+
 
 # Checking mandatory variables
 for i in AUTH_METHOD
@@ -64,10 +73,10 @@ dh easy-rsa/keys/dh2048.pem
 cipher AES-128-CBC
 auth SHA1
 server $VPNPOOL_NETWORK $VPNPOOL_NETMASK
-push "dhcp-option DNS 169.254.169.250"
-push "dhcp-option SEARCH rancher.internal"
-push "route 10.42.0.0 255.255.0.0"
-push "route 169.254.169.250 255.255.255.255"
+push "dhcp-option DNS $PUSHDNS"
+push "dhcp-option SEARCH $PUSHSEARCH"
+push "route $ROUTE_NETWORK $ROUTE_NETMASK"
+$RANCHER_METADATA_API
 keepalive 10 120
 comp-lzo
 persist-key
@@ -79,8 +88,9 @@ client-cert-not-required
 script-security 3 system
 auth-user-pass-verify /usr/local/bin/openvpn-auth.sh via-env
 
-$OPENVPN_EXTRACONF
 EOF
+
+echo $OPENVPN_EXTRACONF |sed 's/\\n/\n/g' >> $OPENVPNDIR/server.conf
 
 #=====[ Generating certificates ]===============================================
 if [ ! -d $OPENVPNDIR/easy-rsa ]; then
@@ -118,11 +128,16 @@ iptables -t nat -A POSTROUTING -s $VPNPOOL_NETWORK/$VPNPOOL_NETMASK -j MASQUERAD
 
 /usr/local/bin/openvpn-get-client-config.sh > $OPENVPNDIR/client.conf
 
+echo "=====[ OpenVPN Server config ]============================================"
+cat $OPENVPNDIR/server.conf
+echo "=========================================================================="
+
+
 #=====[ Display client config  ]================================================
 echo ""
 echo "=====[ OpenVPN Client config ]============================================"
 echo " To regenerate client config, run the 'openvpn-get-client-config.sh' script "
-echo "=========================================================================="
+echo "--------------------------------------------------------------------------"
 cat $OPENVPNDIR/client.conf
 echo ""
 echo "=========================================================================="
