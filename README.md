@@ -36,10 +36,26 @@ Next two variables are used in client configuration generation process,
 to indicate OpenVPN clients where to connect to establish the link
 - REMOTE_IP="ipOrHostname"
 - REMOTE_PORT="1194"
+ 
+If you don't want to expose the full Rancher network, you can set your own network
+and netmask with following variables:
+- ROUTE_NETWORK="10.42.0.0"
+- ROUTE_NETMASK="255.255.0.0"
+
+If you don't want to expose the interunal Rancher metadata api, you can set any 
+value to this variable, it will prevent to add the route to metadata api. Default
+is to expose the metadata api, in this case this variable is empty.
+- NO_RANCHER_METADATA_API="" => expose metadata api
+- NO_RANCHER_METADATA_API="1" => do not expose metadata api
+
+You can also set your custom search domain and DNS server pushed to VPN clients:
+- PUSHDNS="169.254.169.250"
+- PUSHSEARCH="rancher.internal"
 
 There is also an optionnal variable to let you customize OpenVPN server config, 
-for example to push your own custom route
-- OPENVPN_EXTRACONF=""
+for example to push your own custom route. This variable accept multiple line by
+adding a simple \n between lines.
+- OPENVPN_EXTRACONF="first line\nsecond line\nthird line"
 
 ---
 
@@ -69,7 +85,12 @@ docker run -d \
     -e CERT_OU=IT \
     -e VPNPOOL_NETWORK=10.8.0.0 \
     -e VPNPOOL_CIDR=24 \
-    -e OPENVPN_EXTRACONF='push "10.10.0.0 255.255.0.0"'
+    -e OPENVPN_EXTRACONF='# Example of multiline extraconf\npush "10.10.0.0 255.255.0.0"\npush "10.20.0.0 255.255.0.0"'
+    -e ROUTE_NETWORK=10.42.103.143 \
+    -e ROUTE_NETMASK=255.255.255.255 \
+    -e PUSHDNS=169.254.169.250 \
+    -e PUSHSEARCH=rancher.internal \
+    -e NO_RANCHER_METADATA_API=1 \
     -e AUTH_METHOD=ldap \
     -e AUTH_LDAP_URL=ldap://ldap.acme.tld \
     -e AUTH_LDAP_BASEDN='dc=acme,dc=tld' \
