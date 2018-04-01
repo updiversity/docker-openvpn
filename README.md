@@ -2,12 +2,11 @@
 
 OpenVPN server image made to give access to Rancher network with modular authentication.
 
-This Server doesn't relies on clients certificates, but on credential based authentication
+This Server relies not only on clients certificates, but as well on credential based authentication
 
 Current version is shipped with following authentication :
 - httpbasic
 - httpdigest
-- ldap
 - rancherlocal
 
 ---
@@ -36,6 +35,9 @@ Next two variables are used in client configuration generation process,
 to indicate OpenVPN clients where to connect to establish the link
 - REMOTE_IP="ipOrHostname"
 - REMOTE_PORT="1194"
+
+If you prefer to use UDP protocol, you can set it with the following variable:
+- VPN_PROTO="udp"
  
 If you don't want to expose the full Rancher network, you can set your own network
 and netmask with following variables:
@@ -67,11 +69,11 @@ Here is the minimal docker run example with **httpbasic** authentication :
 ```sh
 docker run -d --privileged=true -p 1194:1194 \
     -e AUTH_METHOD=httpbasic \
-    -e AUTH_HTTPBASIC_URL=https://api.github.com/user \
+    -e AUTH_URL=https://api.github.com/user \
     mdns/rancher-openvpn
 ```
 
-And here is an exhaustive docker run example with ldap authentication :
+And here is an exhaustive docker run example with rancherlocal authentication :
 ```sh
 docker run -d \
     --privileged=true \
@@ -91,16 +93,12 @@ docker run -d \
     -e PUSHDNS=169.254.169.250 \
     -e PUSHSEARCH=rancher.internal \
     -e NO_RANCHER_METADATA_API=1 \
-    -e AUTH_METHOD=ldap \
-    -e AUTH_LDAP_URL=ldap://ldap.acme.tld \
-    -e AUTH_LDAP_BASEDN='dc=acme,dc=tld' \
-    -e AUTH_LDAP_SEARCH='(uid=$username)' \
-    -e AUTH_LDAP_BINDDN='cn=admin,dc=acme,dc=tld' \
-    -e AUTH_LDAP_BINDPWD='thisIsTheBindDnPassword' \
+    -e AUTH_METHOD=rancherlocal \
+    -e AUTH_URL=http://rancher.tld/v1/token \
     -v /etc/openvpn \
     --name=vpn \
     -p 1194:1194 \
-    mdns/rancher-openvpn
+    updiversity/docker-openvpn
 ```
 
 Note bene : First launch takes more time because of certificates and private keys generation
@@ -122,8 +120,8 @@ You can test authentication against the GitHub api server :
 ```sh
 docker run -d --privileged=true -p 1194:1194 \
     -e AUTH_METHOD=httpbasic \
-    -e AUTH_HTTPBASIC_URL=https://api.github.com/user \
-    mdns/rancher-openvpn
+    -e AUTH_URL=https://api.github.com/user \
+    updiversity/docker-openvpn
 ```
 
 **Warning ! If you use GitHub api url in production, anyone who has a github account will be able to connect your VPN !!**
@@ -140,39 +138,10 @@ You can test authentication against the httpbin sandbox server :
 ```sh
 docker run -d --privileged=true -p 1194:1194 \
     -e AUTH_METHOD=httpdigest \
-    -e AUTH_HTTPDIGEST_URL=https://httpbin.org/digest-auth/auth/myuser/mypwd \
-    mdns/rancher-openvpn
+    -e AUTH_URL=https://httpbin.org/digest-auth/auth/myuser/mypwd \
+    updiversity/docker-openvpn
 ```
 
-
-### LDAP
-
-Authentication is made by trying to connect a ldap server with client credentials
-
-These are mandatory variable to setup ldap authentication :
-
-- AUTH_METHOD=ldap
-- AUTH_LDAP_URL is the server address in URL format : AUTH_LDAP_URL=ldap[s]://hostnameOrIp[:port]
-- AUTH_LDAP_BASEDN is the base DN to search for, ex: AUTH_LDAP_BASEDN='dc=acme,dc=com'
-- AUTH_LDAP_SEARCH is the ldap search pattern to find user's dn, with a parameter $username, ex : AUTH_LDAP_SEARCH='(uid=$username)'
-
-If your ldap server need to be authenticated to search directory, you can use optionnals binding variables: 
-
-- AUTH_LDAP_BINDDN : DN to use in searching processs
-- AUTH_LDAP_BINDPWD : password associated
-
-You can test ldap authentication with osixia/openldap ldap docker image, with login "admin" :
-```
-docker run -d --name=ldap -e LDAP_ORGANISATION="ACME" -e LDAP_DOMAIN="acme.tld" -e LDAP_ADMIN_PASSWORD="mypwd" osixia/openldap:1.1.1
-docker run -d --privileged=true -p 1194:1194 --link ldap:ldapsrv \
-    -e AUTH_METHOD=ldap \
-    -e AUTH_LDAP_URL=ldap://ldapsrv \
-    -e AUTH_LDAP_BASEDN='dc=acme,dc=com' \
-    -e AUTH_LDAP_SEARCH='(uid=$username)' \
-    -e AUTH_LDAP_BINDDN='cn=admin,dc=acme,dc=tld' \
-    -e AUTH_LDAP_BINDPWD='mypwd' \
-    mdns/rancher-openvpn
-```
 ---
 
 ### Rancher Server in local mode
@@ -181,14 +150,14 @@ Authentication is made by trying to connect to a Rancher Server configured in lo
 
 Each variable is mandatory :
 - AUTH_METHOD=rancherlocal
-- AUTH_HTTPBASIC_URL is the http server url, ex : AUTH_HTTPBASIC_URL='http[s]://hostname[:port]/v1/token'
+- AUTH_URL is the http server url, ex : AUTH_HTTPBASIC_URL='http[s]://hostname[:port]/v1/token'
 
 You can test authentication against the Rancher api server :
 ```sh
 docker run -d --privileged=true -p 1194:1194 \
     -e AUTH_METHOD=rancherlocal \
-    -e AUTH_HTTPBASIC_URL=https://rancher.example.com/v1/token \
-    mdns/rancher-openvpn
+    -e AUTH_URL=https://rancher.example.com/v1/token \
+    updiversity/docker-openvpn
 ```
 
 ## Client configuration
