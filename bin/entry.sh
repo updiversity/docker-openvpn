@@ -18,6 +18,8 @@ OPENVPNDIR="/etc/openvpn"
 [ "$VPNPOOL_CIDR" = "" ]    && export VPNPOOL_CIDR="16"
 [ "$REMOTE_IP" = "" ]       && export REMOTE_IP="ipOrHostname"
 [ "$REMOTE_PORT" = "" ]     && export REMOTE_PORT="1194"
+[ "$VPN_PROTO" = "" ]       && export VPN_PROTO="tcp"
+
 [ "$PUSHDNS" = "" ]         && export PUSHDNS="169.254.169.250"
 [ "$PUSHSEARCH" = "" ]      && export PUSHSEARCH="rancher.internal"
 
@@ -63,7 +65,7 @@ VPNPOOL_NETMASK=$(netmask -s $VPNPOOL_NETWORK/$VPNPOOL_CIDR | awk -F/ '{print $2
 
 cat > $OPENVPNDIR/server.conf <<- EOF
 port 1194
-proto tcp
+proto $VPN_PROTO
 link-mtu 1500
 dev tun
 ca easy-rsa/keys/ca.crt
@@ -83,7 +85,6 @@ persist-key
 persist-tun
 client-to-client
 username-as-common-name
-client-cert-not-required
 
 script-security 3 system
 auth-user-pass-verify /usr/local/bin/openvpn-auth.sh via-env
@@ -115,7 +116,6 @@ if [ ! -d $OPENVPNDIR/easy-rsa ]; then
    checkpoint
    ./build-dh || error "Cannot create dh file"
    checkpoint
-   ./build-key --batch RancherVPNClient
    openvpn --genkey --secret keys/ta.key
    popd
 fi
