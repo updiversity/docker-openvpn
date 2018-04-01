@@ -116,6 +116,7 @@ if [ ! -d $OPENVPNDIR/easy-rsa ]; then
    checkpoint
    ./build-dh || error "Cannot create dh file"
    checkpoint
+   ./build-key --batch client || error "Cannot create client key"
    openvpn --genkey --secret keys/ta.key
    popd
 fi
@@ -126,7 +127,7 @@ iptables -t nat -F
 iptables -t nat -A POSTROUTING -s $VPNPOOL_NETWORK/$VPNPOOL_NETMASK -j MASQUERADE
 
 
-/usr/local/bin/openvpn-get-client-config.sh > $OPENVPNDIR/client.conf
+/usr/local/bin/openvpn-get-client-config.sh client > $OPENVPNDIR/client.conf
 
 # Configure client config file
 sed -i "s/proto tcp/proto $VPN_PROTO/g" $OPENVPNDIR/client.conf
