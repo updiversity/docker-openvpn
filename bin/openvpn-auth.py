@@ -53,7 +53,7 @@ if all (k in os.environ for k in ("username","password","AUTH_METHOD")):
     #   AUTH_METHOD='httpbasic'
     #   AUTH_URL='http[s]://hostname[:port][/uri]'
     #
-    elif auth_method=='httpbasic':
+    if auth_method=='httpbasic':
         if "AUTH_URL" in os.environ:
             url=os.environ.get('AUTH_URL')
             auth_http_basic(url, username, password)
