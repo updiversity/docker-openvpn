@@ -128,6 +128,9 @@ iptables -t nat -A POSTROUTING -s $VPNPOOL_NETWORK/$VPNPOOL_NETMASK -j MASQUERAD
 
 /usr/local/bin/openvpn-get-client-config.sh > $OPENVPNDIR/client.conf
 
+# Configure client config file
+sed -i "s/proto tcp/proto $VPN_PROTO/g" $OPENVPNDIR/client.conf
+
 echo "=====[ OpenVPN Server config ]============================================"
 cat $OPENVPNDIR/server.conf
 echo "=========================================================================="

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-DOCKER_IMAGE="updiversity/rancher-openvpn"
+DOCKER_IMAGE="updiversity/docker-openvpn"
 DOCKER_TAG="$1"
 
 if [ "$DOCKER_TAG" = "" ]
