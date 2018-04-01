@@ -4,7 +4,7 @@ OPENVPNDIR="/etc/openvpn"
 . $OPENVPNDIR/remote.env
 CA_CONTENT=$(cat $OPENVPNDIR/easy-rsa/keys/ca.crt)
 KEY_CONTENT=$(cat $OPENVPNDIR/easy-rsa/keys/$1.key)
-CERT_CONTENT=$(cat $OPENVPNDIR/easy-rsa/keys/$1.cert)
+CERT_CONTENT=$(cat $OPENVPNDIR/easy-rsa/keys/$1.crt)
 
 cat <<- EOF
 remote $REMOTE_IP $REMOTE_PORT
